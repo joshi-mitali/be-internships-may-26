@@ -6,6 +6,13 @@ const dbPath = process.env.DATABASE_URL || './data/signals.db';
 fs.mkdirSync(path.dirname(dbPath), { recursive: true });
 const db = new Database(dbPath);
 
+// WAL lets reads happen during a write. Keep busy_timeout small: better-sqlite3
+// is synchronous, so a long timeout would block the whole event loop on a lock.
+// A quick SQLITE_BUSY is better - the retry in signals.js backs off without
+// blocking anything.
+db.pragma('journal_mode = WAL');
+db.pragma('busy_timeout = 200');
+
 // schema
 db.exec(`
 CREATE TABLE IF NOT EXISTS signals (
